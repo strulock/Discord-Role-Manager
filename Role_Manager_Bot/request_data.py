@@ -45,13 +45,19 @@ def values_request_body(permission_values):
 """
 Converts all the True/False values to ✔ and ❌ for user friendliness.
 """
-def permission_values_to_emojis(permission_values, permission_names):
+def build_rows(permission_values, permission_names, colors):
     for i in range(len(permission_values)):
         if permission_values[i]["administrator"]:
             for perm_name in permission_names:
+                if perm_name == "Color":
+                    permission_values[i][perm_name] = colors[i]
+                    continue
                 permission_values[i][perm_name] = "✔️"
         else:
             for perm_name in permission_names:
+                if perm_name == "Color":
+                    permission_values[i][perm_name] = colors[i]
+                    continue
                 if permission_values[i][perm_name]:
                     permission_values[i][perm_name] = "✔️"
                 else:

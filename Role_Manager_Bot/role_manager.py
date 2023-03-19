@@ -18,7 +18,9 @@ CLIENT = gspread.authorize(CREDENTIALS)
 SERVICE = build("sheets", "v4", credentials=CREDENTIALS)
 
 """ Discord API Initializations """
-BOT = commands.Bot(command_prefix='!')
+INTENTS = discord.Intents.default()
+INTENTS.message_content = True
+BOT = commands.Bot(command_prefix='!', intents=INTENTS)
 
 
 @BOT.event
@@ -92,7 +94,7 @@ async def configure(ctx, *, spreadsheet_id=None):
         await ctx.send(embed=embed)
 
 """
-!export - Owner Only
+!export
 This command exports all the roles and their permissions
 from the Discord Server, organizes them and imports them 
 to the Google Sheet assigned to that Discord Server.
@@ -100,18 +102,21 @@ to the Google Sheet assigned to that Discord Server.
 @BOT.command()
 @commands.has_permissions(administrator=True)
 async def export(ctx):
-    if ctx.message.author.id == ctx.guild.owner_id:
+    #if ctx.message.author.id == ctx.guild.owner_id:
         file_name = str(ctx.guild.id) + ".txt"
         try:
             with open(path.join("serverdata", file_name), "r+") as server_file:
                 spreadsheet_id = server_file.read()
                 try:
                     role_list = ctx.guild.roles  # Export all the roles from a server. List of role type Objects.
-                    role_list.reverse()
                     role_names = [role.name for role in role_list]  # Get all the role names from the role Objects.
+                    role_names.reverse() # Arrange in the order roles appear in Discord
                     role_permissions = {role: dict(role.permissions) for role in role_list}  # Put Roles in a dictionary and their permission_values in sub-dictionaries.
+                    role_colors = [str(role.color) for role in role_list] # Get role colors
                     permission_names = list(role_permissions[role_list[0]].keys())  # Get all the permission names.
-                    permission_values = permission_values_to_emojis(list(role_permissions.values()), permission_names)  # Get all of the permissions values and convert them to √ or X.
+                    permission_names.append("Color") # Add a Color column
+                    permission_values = build_rows(list(role_permissions.values()), permission_names, role_colors)  # Get all of the permissions values and convert them to √ or X.
+                    permission_values.reverse() # Arrange in proper order again
 
                     clear_request = SERVICE.spreadsheets().values().clear(spreadsheetId=spreadsheet_id, range="A1:AH1000", body=clear_request_body())
                     titles_request = SERVICE.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_id, body=titles_request_body(role_names, permission_names))
@@ -135,14 +140,109 @@ async def export(ctx):
             embed.add_field(name="You have to configure your server first. Please try the command !setuphelp for more information.", value="```!setuphelp```")
             embed.set_thumbnail(url=picture("ERROR"))
             await ctx.send(embed=embed)
-    else:  # If the sender is a simple Admin, refuse permission with an error embed.
-        embed = discord.Embed(title="Access Denied!", description="You have no proper authorization for this command.", color=color("RED"))
-        embed.add_field(name="This command may only be used by the server owner! ", value='<@' + str(ctx.guild.owner_id) + '>')
-        embed.set_thumbnail(url=picture("ERROR"))
-        await ctx.send(embed=embed)
+    #else:  # If the sender is a simple Admin, refuse permission with an error embed.
+        #embed = discord.Embed(title="Access Denied!", description="You have no proper authorization for this command.", color=color("RED"))
+        #embed.add_field(name="This command may only be used by the server owner! ", value='<@' + str(ctx.guild.owner_id) + '>')
+        #embed.set_thumbnail(url=picture("ERROR"))
+        #await ctx.send(embed=embed)
+
+"""
+!imports
+This command imports roles from sheet to Discord.
+"""
+@BOT.command()
+@commands.has_permissions(administrator=True)
+async def imports(ctx):
+    #if ctx.message.author.id == ctx.guild.owner_id:
+        file_name = str(ctx.guild.id) + ".txt"
+        try:
+            with open(path.join("serverdata", file_name), "r+") as server_file:
+                spreadsheet_id = server_file.read()
+                try:
+                    values_request = SERVICE.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range="A1:AQ1000")
+                    valueRange = values_request.execute()
+                    headings = valueRange["values"][0]  # Get headings from the first row
+                    role_list = ctx.guild.roles
+                    roles_to_add = []
+                    for row in valueRange["values"]:
+                        name = row[0]
+                        if name == "":
+                            continue
+                        found = False
+                        for role in role_list:
+                            if name == role.name:
+                                found = True
+                                break
+                        if found == False:
+                            roles_to_add.append(name)
+                            print("Adding role:", name)
+
+                            #role_permissions = {role: dict(role.permissions) for role in role_list}  # Put Roles in a dictionary and their permission_values in sub-dictionaries.
+                            perms = discord.Permissions.none()
+                            clr = None
+                            i = 0
+                            for heading in headings:
+                                if heading == "":
+                                    i += 1
+                                    continue
+                                if heading == "Color":
+                                    clr = discord.Colour.from_str(row[i])
+                                    i += 1
+                                    continue
+
+                                if row[i] == "✔️" or row[i] != "":
+                                    perms[heading] = True
+
+                                i += 1
+                                
+
+                            #create_role(*, name=..., permissions=..., color=..., colour=..., hoist=..., display_icon=..., mentionable=..., reason=None)
+                            await ctx.guild.create_role(name=name, permissions=perms, color=clr)
+
+
+                    embed = discord.Embed(title="Import Test", description="Your sheet's values, hopefully", color=color("GREEN"))
+                    for role in roles_to_add:
+                        embed.add_field(name="Role added:", value=role)
+                    embed.set_thumbnail(url=picture("GSHEET"))
+                    await ctx.send(embed=embed)
+
+                    #role_list = ctx.guild.roles  # Export all the roles from a server. List of role type Objects.
+                    #role_list.reverse()
+                    #role_names = [role.name for role in role_list]  # Get all the role names from the role Objects.
+                    #role_permissions = {role: dict(role.permissions) for role in role_list}  # Put Roles in a dictionary and their permission_values in sub-dictionaries.
+                    #permission_names = list(role_permissions[role_list[0]].keys())  # Get all the permission names.
+                    #permission_values = permission_values_to_emojis(list(role_permissions.values()), permission_names)  # Get all of the permissions values and convert them to √ or X.
+
+                    #clear_request = SERVICE.spreadsheets().values().clear(spreadsheetId=spreadsheet_id, range="A1:AH1000", body=clear_request_body())
+                    #titles_request = SERVICE.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_id, body=titles_request_body(role_names, permission_names))
+                    #values_request = SERVICE.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_id, body=values_request_body(permission_values))
+                    #clear_request.execute()  # Clears the spreadsheet.
+                    #titles_request.execute()
+                    #values_request.execute()  # Handling and execution of the requests to the Google API. See request_data.py for more info.
+
+                    #embed = discord.Embed(title="Permission Export Complete!", description="Your server's role permission_values have been successfully exported!", color=color("GREEN"))
+                    #embed.add_field(name="Here's the link to your worksheet: ", value=link("SPREADSHEET") + spreadsheet_id)
+                    #embed.set_thumbnail(url=picture("GSHEET"))
+                    #await ctx.send(embed=embed)
+                except Exception as exception:
+                    print("Server ID:" + ctx.guild.id + "\n Exception:" + str(exception))
+                    embed = discord.Embed(title="Worksheet unavailable!", description="There was an issue trying to access your server's worksheet!", color=color("RED"))
+                    embed.add_field(name="Make sure you have followed the !setuphelp steps correctly. If the issue persists, contact the BOT Owner.", value="```!setuphelp```")
+                    embed.set_thumbnail(url=picture("ERROR"))
+                    await ctx.send(embed=embed)
+        except FileNotFoundError:  # If the file does not exist, prompt user to configure.
+            embed = discord.Embed(title="No file found!", description="There was an issue trying to import your server's file from the database.", color=color("RED"))
+            embed.add_field(name="You have to configure your server first. Please try the command !setuphelp for more information.", value="```!setuphelp```")
+            embed.set_thumbnail(url=picture("ERROR"))
+            await ctx.send(embed=embed)
+    #else:  # If the sender is a simple Admin, refuse permission with an error embed.
+        #embed = discord.Embed(title="Access Denied!", description="You have no proper authorization for this command.", color=color("RED"))
+        #embed.add_field(name="This command may only be used by the server owner! ", value='<@' + str(ctx.guild.owner_id) + '>')
+        #embed.set_thumbnail(url=picture("ERROR"))
+        #await ctx.send(embed=embed)
 
 """
 BOT RUN Command that logs in the bot with our credentials. 
 Has to be in the end of the file.
 """
-BOT.run('BOT_TOKEN_HERE')
+BOT.run('MTA4MTMzMDQ4MjQ4NDA4ODg4Mw.GES9Ou.viT1eA5B__JRG-YCmoJbm-U4whpTAR2ePrN6Zk')
