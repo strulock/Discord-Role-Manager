@@ -245,4 +245,4 @@ async def imports(ctx):
 BOT RUN Command that logs in the bot with our credentials. 
 Has to be in the end of the file.
 """
-BOT.run('MTA4MTMzMDQ4MjQ4NDA4ODg4Mw.GES9Ou.viT1eA5B__JRG-YCmoJbm-U4whpTAR2ePrN6Zk')
+BOT.run('TOKEN')
