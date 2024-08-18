@@ -57,36 +57,36 @@ If a file already exists, it prompts the user to update the file instead of reco
 @commands.has_permissions(administrator=True)
 async def configure(ctx, *, spreadsheet_id=None):
     if len(spreadsheet_id) == 44:  # Ensure input was given and that it is valid.
-        if ctx.message.author.id == ctx.guild.owner_id:  # If the sender is the server owner, proceed.
-            file_name = str(ctx.guild.id) + ".txt"  # The name of the file is that of the server's unique ID.
-            try:  # If the file exists, open and read it and give the link.
-                with open(path.join("serverdata", file_name), "r+") as server_file:
-                    server_file.truncate(0)
-                    server_file.write(spreadsheet_id)
+        #if ctx.message.author.id == ctx.guild.owner_id:  # If the sender is the server owner, proceed.
+        file_name = str(ctx.guild.id) + ".txt"  # The name of the file is that of the server's unique ID.
+        try:  # If the file exists, open and read it and give the link.
+            with open(path.join("serverdata", file_name), "r+") as server_file:
+                server_file.truncate(0)
+                server_file.write(spreadsheet_id)
 
-                    embed = discord.Embed(title="You already have a worksheet!", description="Your spreadsheet ID has been updated instead!", color=color("GREEN"))
-                    embed.add_field(name="Your worksheet has been linked! Here's the link: ", value=link("SPREADSHEET") + spreadsheet_id)
-                    embed.set_thumbnail(url=picture("GSHEET"))
-                    await ctx.send(embed=embed)
-            except FileNotFoundError:  # If it doesn't, create it and give the complete link.
-                with open(path.join("serverdata", file_name), "w+") as server_file:
-                    server_file.write(spreadsheet_id)
-
-                embed = discord.Embed(title="Worksheet Configuration Complete!", description="Your server has been added to the database.", color=color("GREEN"))
+                embed = discord.Embed(title="You already have a worksheet!", description="Your spreadsheet ID has been updated instead!", color=color("GREEN"))
                 embed.add_field(name="Your worksheet has been linked! Here's the link: ", value=link("SPREADSHEET") + spreadsheet_id)
                 embed.set_thumbnail(url=picture("GSHEET"))
                 await ctx.send(embed=embed)
-            except Exception as exception:
-                print("Server ID:" + ctx.guild.id + "\n Exception:" + str(exception))
-                embed = discord.Embed(title="Something went wrong!", description="Please contact the BOT owner on GitHub!", color=color("RED"))
-                embed.add_field(name="Error code: ", value=str(exception))
-                embed.set_thumbnail(url=picture("ERROR"))
-                await ctx.send(embed=embed)
-        else:  # If the sender is a simple Admin, refuse permission with an error embed.
-            embed = discord.Embed(title="Access Denied!", description="You have no proper authorization for this command.", color=color("RED"))
-            embed.add_field(name="This command may only be used by the server owner! ", value='<@' + str(ctx.guild.owner_id) + '>')
+        except FileNotFoundError:  # If it doesn't, create it and give the complete link.
+            with open(path.join("serverdata", file_name), "w+") as server_file:
+                server_file.write(spreadsheet_id)
+
+            embed = discord.Embed(title="Worksheet Configuration Complete!", description="Your server has been added to the database.", color=color("GREEN"))
+            embed.add_field(name="Your worksheet has been linked! Here's the link: ", value=link("SPREADSHEET") + spreadsheet_id)
+            embed.set_thumbnail(url=picture("GSHEET"))
+            await ctx.send(embed=embed)
+        except Exception as exception:
+            print("Server ID:" + ctx.guild.id + "\n Exception:" + str(exception))
+            embed = discord.Embed(title="Something went wrong!", description="Please contact the BOT owner on GitHub!", color=color("RED"))
+            embed.add_field(name="Error code: ", value=str(exception))
             embed.set_thumbnail(url=picture("ERROR"))
             await ctx.send(embed=embed)
+        #else:  # If the sender is a simple Admin, refuse permission with an error embed.
+        #    embed = discord.Embed(title="Access Denied!", description="You have no proper authorization for this command.", color=color("RED"))
+        #    embed.add_field(name="This command may only be used by the server owner! ", value='<@' + str(ctx.guild.owner_id) + '>')
+        #    embed.set_thumbnail(url=picture("ERROR"))
+        #    await ctx.send(embed=embed)
     else:  # If no valid ID was given, ask for a valid ID and show instructions.
         embed = discord.Embed(title="No worksheet ID specified!", description="Please specify a valid worksheet ID.", color=color("RED"))
         embed.add_field(name="If want to see how to setup this bot use the command: ", value="```!setuphelp```", inline=False)
@@ -178,7 +178,7 @@ async def imports(ctx):
                             print("Adding role:", name)
 
                             #role_permissions = {role: dict(role.permissions) for role in role_list}  # Put Roles in a dictionary and their permission_values in sub-dictionaries.
-                            perms = discord.Permissions.none()
+                            permObject = {}
                             clr = None
                             i = 0
                             for heading in headings:
@@ -191,10 +191,52 @@ async def imports(ctx):
                                     continue
 
                                 if row[i] == "✔️" or row[i] != "":
-                                    perms[heading] = True
+                                    permObject[heading] = True
 
                                 i += 1
-                                
+
+                            perms = discord.Permissions.none()
+                            perms.create_instant_invite     = permObject["create_instant_invite"]                          
+                            perms.kick_members              = permObject["kick_members"] 
+                            perms.ban_members               = permObject["ban_members"]
+                            perms.administrator             = permObject["administrator"]
+                            perms.manage_channels           = permObject["manage_channels"]
+                            perms.manage_guild              = permObject["manage_guild"]
+                            perms.add_reactions             = permObject["add_reactions"]
+                            perms.view_audit_log            = permObject["view_audit_log"]
+                            perms.priority_speaker          = permObject["priority_speaker"]
+                            perms.stream                    = permObject["stream"]
+                            perms.read_messages             = permObject["read_messages"]
+                            perms.send_messages             = permObject["send_messages"]
+                            perms.send_tts_messages         = permObject["send_tts_messages"]
+                            perms.manage_messages           = permObject["manage_messages"]
+                            perms.embed_links               = permObject["embed_links"]
+                            perms.attach_files              = permObject["attach_files"]
+                            perms.read_message_history      = permObject["read_message_history"]
+                            perms.mention_everyone          = permObject["mention_everyone"]
+                            perms.external_emojis           = permObject["external_emojis"]
+                            perms.view_guild_insights       = permObject["view_guild_insights"]
+                            perms.connect                   = permObject["connect"]
+                            perms.speak                     = permObject["speak"]
+                            perms.mute_members              = permObject["mute_members"]
+                            perms.deafen_members            = permObject["deafen_members"]
+                            perms.move_members              = permObject["move_members"]
+                            perms.use_voice_activation      = permObject["use_voice_activation"]
+                            perms.change_nickname           = permObject["change_nickname"]
+                            perms.manage_nicknames          = permObject["manage_nicknames"]
+                            perms.manage_roles              = permObject["manage_roles"]
+                            perms.manage_webhooks           = permObject["manage_webhooks"]
+                            perms.manage_emojis             = permObject["manage_emojis"]
+                            perms.use_application_commands  = permObject["use_application_commands"]
+                            perms.request_to_speak          = permObject["request_to_speak"]
+                            perms.manage_events             = permObject["manage_events"]
+                            perms.manage_threads            = permObject["manage_threads"]
+                            perms.create_public_threads     = permObject["create_public_threads"]
+                            perms.create_private_threads    = permObject["create_private_threads"]
+                            perms.external_stickers         = permObject["external_stickers"]
+                            perms.send_messages_in_threads  = permObject["send_messages_in_threads"]
+                            perms.use_embedded_activities   = permObject["use_embedded_activities"]
+                            perms.moderate_members          = permObject["moderate_members"]
 
                             #create_role(*, name=..., permissions=..., color=..., colour=..., hoist=..., display_icon=..., mentionable=..., reason=None)
                             await ctx.guild.create_role(name=name, permissions=perms, color=clr)
