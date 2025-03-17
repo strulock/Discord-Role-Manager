@@ -10,6 +10,7 @@ from googleapiclient.discovery import build
 # Assistance Files Imports
 from media import *
 from request_data import *
+from config import TOKEN
 
 """ Google API Initializations """
 SCOPES = link("SCOPE")
@@ -287,4 +288,4 @@ async def imports(ctx):
 BOT RUN Command that logs in the bot with our credentials. 
 Has to be in the end of the file.
 """
-BOT.run('TOKEN')
+BOT.run(TOKEN)
